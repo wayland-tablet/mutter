@@ -39,6 +39,7 @@
 #include "meta-wayland-seat.h"
 #include "meta-wayland-outputs.h"
 #include "meta-wayland-data-device.h"
+#include "meta-wayland-tablet-manager.h"
 
 static MetaWaylandCompositor _meta_wayland_compositor;
 
@@ -336,6 +337,7 @@ meta_wayland_init (void)
   meta_wayland_shell_init (compositor);
   meta_wayland_pointer_gestures_init (compositor);
   meta_wayland_seat_init (compositor);
+  meta_wayland_tablet_manager_init (compositor);
 
   if (!meta_xwayland_start (&compositor->xwayland_manager, compositor->wayland_display))
     g_error ("Failed to start X Wayland");
