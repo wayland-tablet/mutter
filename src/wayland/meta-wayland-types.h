@@ -34,6 +34,7 @@ typedef struct _MetaWaylandDragDestFuncs MetaWaylandDragDestFuncs;
 typedef struct _MetaWaylandDataOffer MetaWaylandDataOffer;
 typedef struct _MetaWaylandDataDevice MetaWaylandDataDevice;
 
+typedef struct _MetaWaylandTabletManager MetaWaylandTabletManager;
 typedef struct _MetaWaylandTablet MetaWaylandTablet;
 
 typedef struct _MetaWaylandBuffer MetaWaylandBuffer;
