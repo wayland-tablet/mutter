@@ -45,6 +45,8 @@ struct _MetaWaylandTablet
   struct wl_listener focus_surface_destroy_listener;
 
   MetaCursorRenderer *cursor_renderer;
+  MetaWaylandSurface *cursor_surface;
+  struct wl_listener cursor_surface_destroy_listener;
 
   MetaWaylandSurface *current;
   GSList *buttons;
