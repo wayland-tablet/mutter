@@ -210,8 +210,6 @@ struct _MetaDisplay
   int         grab_anchor_root_x;
   int         grab_anchor_root_y;
   MetaRectangle grab_anchor_window_pos;
-  MetaTileMode  grab_tile_mode;
-  int           grab_tile_monitor_number;
   int         grab_latest_motion_x;
   int         grab_latest_motion_y;
   guint       grab_have_pointer : 1;

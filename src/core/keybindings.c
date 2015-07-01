@@ -2001,23 +2001,13 @@ process_mouse_move_resize_grab (MetaDisplay     *display,
 
   if (event->keyval == CLUTTER_KEY_Escape)
     {
-      /* Hide the tiling preview if necessary */
-      if (window->tile_mode != META_TILE_NONE)
-        meta_screen_hide_tile_preview (screen);
-
-      /* Restore the original tile mode */
-      window->tile_mode = display->grab_tile_mode;
-      window->tile_monitor_number = display->grab_tile_monitor_number;
-
       /* End move or resize and restore to original state.  If the
        * window was a maximized window that had been "shaken loose" we
        * need to remaximize it.  In normal cases, we need to do a
        * moveresize now to get the position back to the original.
        */
-      if (window->shaken_loose || window->tile_mode == META_TILE_MAXIMIZED)
+      if (window->shaken_loose)
         meta_window_maximize (window, META_MAXIMIZE_BOTH);
-      else if (window->tile_mode != META_TILE_NONE)
-        meta_window_tile (window);
       else
         meta_window_move_resize_frame (display->grab_window,
                                        TRUE,
@@ -2946,34 +2936,6 @@ handle_toggle_tiled (MetaDisplay     *display,
                      MetaKeyBinding  *binding,
                      gpointer         dummy)
 {
-  MetaTileMode mode = binding->handler->data;
-
-  if ((META_WINDOW_TILED_LEFT (window) && mode == META_TILE_LEFT) ||
-      (META_WINDOW_TILED_RIGHT (window) && mode == META_TILE_RIGHT))
-    {
-      window->tile_monitor_number = window->saved_maximize ? window->monitor->number
-        : -1;
-      window->tile_mode = window->saved_maximize ? META_TILE_MAXIMIZED
-        : META_TILE_NONE;
-
-      if (window->saved_maximize)
-        meta_window_maximize (window, META_MAXIMIZE_BOTH);
-      else
-        meta_window_unmaximize (window, META_MAXIMIZE_BOTH);
-    }
-  else if (meta_window_can_tile_side_by_side (window))
-    {
-      window->tile_monitor_number = window->monitor->number;
-      window->tile_mode = mode;
-      /* Maximization constraints beat tiling constraints, so if the window
-       * is maximized, tiling won't have any effect unless we unmaximize it
-       * horizontally first; rather than calling meta_window_unmaximize(),
-       * we just set the flag and rely on meta_window_tile() syncing it to
-       * save an additional roundtrip.
-       */
-      window->maximized_horizontally = FALSE;
-      meta_window_tile (window);
-    }
 }
 
 static void
