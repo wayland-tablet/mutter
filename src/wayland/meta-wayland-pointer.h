@@ -31,12 +31,6 @@
 
 #include <meta/meta-cursor-tracker.h>
 
-#define META_TYPE_WAYLAND_SURFACE_ROLE_CURSOR (meta_wayland_surface_role_cursor_get_type ())
-G_DECLARE_FINAL_TYPE (MetaWaylandSurfaceRoleCursor,
-                      meta_wayland_surface_role_cursor,
-                      META, WAYLAND_SURFACE_ROLE_CURSOR,
-                      MetaWaylandSurfaceRole);
-
 struct _MetaWaylandPointerGrabInterface
 {
   void (*focus) (MetaWaylandPointerGrab *grab,
@@ -73,6 +67,7 @@ struct _MetaWaylandPointer
   guint32 click_serial;
 
   MetaWaylandSurface *cursor_surface;
+  guint cursor_surface_destroy_id;
 
   MetaWaylandPointerGrab *grab;
   MetaWaylandPointerGrab default_grab;
@@ -141,5 +136,9 @@ MetaWaylandSurface *meta_wayland_pointer_get_top_popup (MetaWaylandPointer *poin
 MetaWaylandPointerClient * meta_wayland_pointer_get_pointer_client (MetaWaylandPointer *pointer,
                                                                     struct wl_client   *client);
 void meta_wayland_pointer_unbind_pointer_client_resource (struct wl_resource *resource);
+
+void meta_wayland_surface_cursor_update (MetaWaylandSurface *cursor_surface);
+
+void meta_wayland_pointer_update_cursor_surface (MetaWaylandPointer *pointer);
 
 #endif /* META_WAYLAND_POINTER_H */
