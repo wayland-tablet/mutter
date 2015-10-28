@@ -30,12 +30,105 @@
 #include <wayland-server.h>
 #include "wayland-tablet-server-protocol.h"
 #include "meta-wayland-private.h"
+#include "meta-surface-actor-wayland.h"
+#include "meta-wayland-tablet.h"
+#include "meta-wayland-tablet-seat.h"
 #include "meta-wayland-tablet-tool.h"
 
 static void
 unbind_resource (struct wl_resource *resource)
 {
   wl_list_remove (wl_resource_get_link (resource));
+}
+
+static void
+move_resources (struct wl_list *destination,
+                struct wl_list *source)
+{
+  wl_list_insert_list (destination, source);
+  wl_list_init (source);
+}
+
+static void
+move_resources_for_client (struct wl_list   *destination,
+                           struct wl_list   *source,
+                           struct wl_client *client)
+{
+  struct wl_resource *resource, *tmp;
+
+  wl_resource_for_each_safe (resource, tmp, source)
+    {
+      if (wl_resource_get_client (resource) == client)
+        {
+          wl_list_remove (wl_resource_get_link (resource));
+          wl_list_insert (destination, wl_resource_get_link (resource));
+        }
+    }
+}
+
+static void
+meta_wayland_tablet_tool_set_focus (MetaWaylandTabletTool *tool,
+                                    MetaWaylandSurface    *surface)
+{
+  guint32 _time;
+
+  if (tool->focus_surface == surface)
+    return;
+
+  _time = clutter_get_current_event_time ();
+
+  if (tool->focus_surface != NULL)
+    {
+      struct wl_resource *resource;
+      struct wl_list *l;
+
+      l = &tool->focus_resource_list;
+      if (!wl_list_empty (l))
+        {
+          wl_resource_for_each (resource, l)
+            {
+              wl_tablet_tool_send_proximity_out (resource, _time);
+            }
+
+          move_resources (&tool->resource_list, &tool->focus_resource_list);
+        }
+
+      wl_list_remove (&tool->focus_surface_destroy_listener.link);
+      tool->focus_surface = NULL;
+    }
+
+  if (surface != NULL)
+    {
+      struct wl_resource *resource, *tablet_resource;
+      struct wl_client *client;
+      struct wl_list *l;
+
+      tool->focus_surface = surface;
+      client = wl_resource_get_client (tool->focus_surface->resource);
+      wl_resource_add_destroy_listener (tool->focus_surface->resource,
+                                        &tool->focus_surface_destroy_listener);
+
+      move_resources_for_client (&tool->focus_resource_list,
+                                 &tool->resource_list, client);
+
+      tablet_resource = meta_wayland_tablet_lookup_resource (tool->current_tablet,
+                                                             client);
+      l = &tool->focus_resource_list;
+
+      if (!wl_list_empty (l))
+        {
+          struct wl_client *client = wl_resource_get_client (tool->focus_surface->resource);
+          struct wl_display *display = wl_client_get_display (client);
+
+          tool->proximity_serial = wl_display_next_serial (display);
+
+          wl_resource_for_each (resource, l)
+            {
+              wl_tablet_tool_send_proximity_in (resource, tool->proximity_serial, _time,
+                                                tablet_resource, tool->focus_surface->resource);
+            }
+        }
+    }
 }
 
 static guint32
@@ -100,6 +193,16 @@ input_device_tool_get_type (ClutterInputDeviceTool *device_tool)
   return 0;
 }
 
+static void
+tablet_tool_handle_focus_surface_destroy (struct wl_listener *listener,
+                                          void               *data)
+{
+  MetaWaylandTabletTool *tool;
+
+  tool = wl_container_of (listener, tool, focus_surface_destroy_listener);
+  meta_wayland_tablet_tool_set_focus (tool, NULL);
+}
+
 MetaWaylandTabletTool *
 meta_wayland_tablet_tool_new (MetaWaylandTabletSeat  *seat,
                               ClutterInputDevice     *device,
@@ -112,6 +215,9 @@ meta_wayland_tablet_tool_new (MetaWaylandTabletSeat  *seat,
   tool->device = device;
   tool->device_tool = device_tool;
   wl_list_init (&tool->resource_list);
+  wl_list_init (&tool->focus_resource_list);
+
+  tool->focus_surface_destroy_listener.notify = tablet_tool_handle_focus_surface_destroy;
 
   return tool;
 }
@@ -120,6 +226,8 @@ void
 meta_wayland_tablet_tool_free (MetaWaylandTabletTool *tool)
 {
   struct wl_resource *resource, *next;
+
+  meta_wayland_tablet_tool_set_focus (tool, NULL);
 
   wl_resource_for_each_safe (resource, next, &tool->resource_list)
     {
@@ -174,6 +282,26 @@ meta_wayland_tablet_tool_notify_details (MetaWaylandTabletTool *tool,
   wl_tablet_tool_send_done (resource);
 }
 
+static void
+emit_proximity_in (MetaWaylandTabletTool *tool,
+                   struct wl_resource    *resource)
+{
+  struct wl_resource *tablet_resource;
+  struct wl_client *client;
+  guint32 _time;
+
+  if (!tool->focus_surface)
+    return;
+
+  _time = clutter_get_current_event_time ();
+  client = wl_resource_get_client (resource);
+  tablet_resource = meta_wayland_tablet_lookup_resource (tool->current_tablet,
+                                                         client);
+
+  wl_tablet_tool_send_proximity_in (resource, tool->proximity_serial, _time,
+                                    tablet_resource, tool->focus_surface->resource);
+}
+
 struct wl_resource *
 meta_wayland_tablet_tool_create_new_resource (MetaWaylandTabletTool *tool,
                                               struct wl_client      *client,
@@ -187,7 +315,17 @@ meta_wayland_tablet_tool_create_new_resource (MetaWaylandTabletTool *tool,
   wl_resource_set_implementation (resource, &tool_interface,
                                   tool, unbind_resource);
   wl_resource_set_user_data (resource, tool);
-  wl_list_insert (&tool->resource_list, wl_resource_get_link (resource));
+
+  if (tool->focus_surface &&
+      wl_resource_get_client (tool->focus_surface->resource) == client)
+    {
+      wl_list_insert (&tool->focus_resource_list, wl_resource_get_link (resource));
+      emit_proximity_in (tool, resource);
+    }
+  else
+    {
+      wl_list_insert (&tool->resource_list, wl_resource_get_link (resource));
+    }
 
   meta_wayland_tablet_tool_notify_details (tool, resource);
 
@@ -198,21 +336,109 @@ struct wl_resource *
 meta_wayland_tablet_tool_lookup_resource (MetaWaylandTabletTool *tool,
                                           struct wl_client      *client)
 {
-  if (wl_list_empty (&tool->resource_list))
-    return NULL;
+  struct wl_resource *resource = NULL;
 
-  return wl_resource_find_for_client (&tool->resource_list, client);
+  if (!wl_list_empty (&tool->resource_list))
+    resource = wl_resource_find_for_client (&tool->resource_list, client);
+
+  if (!wl_list_empty (&tool->focus_resource_list))
+    resource = wl_resource_find_for_client (&tool->focus_resource_list, client);
+
+  return resource;
+}
+
+static void
+meta_wayland_tablet_tool_account_button (MetaWaylandTabletTool *tool,
+                                         const ClutterEvent    *event)
+{
+  if (event->type == CLUTTER_BUTTON_PRESS)
+    tool->pressed_buttons |= 1 << (event->button.button - 1);
+  else if (event->type == CLUTTER_BUTTON_RELEASE)
+    tool->pressed_buttons &= ~(1 << (event->button.button - 1));
+}
+
+static void
+sync_focus_surface (MetaWaylandTabletTool *tool)
+{
+  MetaDisplay *display = meta_get_display ();
+
+  switch (display->event_route)
+    {
+    case META_EVENT_ROUTE_WINDOW_OP:
+    case META_EVENT_ROUTE_COMPOSITOR_GRAB:
+    case META_EVENT_ROUTE_FRAME_BUTTON:
+      /* The compositor has a grab, so remove our focus */
+      meta_wayland_tablet_tool_set_focus (tool, NULL);
+      break;
+
+    case META_EVENT_ROUTE_NORMAL:
+    case META_EVENT_ROUTE_WAYLAND_POPUP:
+      meta_wayland_tablet_tool_set_focus (tool, tool->current);
+      break;
+
+    default:
+      g_assert_not_reached ();
+    }
+}
+
+static void
+repick_for_event (MetaWaylandTabletTool *tool,
+                  const ClutterEvent    *for_event)
+{
+  ClutterActor *actor = NULL;
+
+  actor = clutter_event_get_source (for_event);
+
+  if (META_IS_SURFACE_ACTOR_WAYLAND (actor))
+    tool->current = meta_surface_actor_wayland_get_surface (META_SURFACE_ACTOR_WAYLAND (actor));
+  else
+    tool->current = NULL;
+
+  sync_focus_surface (tool);
 }
 
 void
 meta_wayland_tablet_tool_update (MetaWaylandTabletTool *tool,
                                  const ClutterEvent    *event)
 {
+  switch (event->type)
+    {
+    case CLUTTER_BUTTON_PRESS:
+    case CLUTTER_BUTTON_RELEASE:
+      meta_wayland_tablet_tool_account_button (tool, event);
+      break;
+    case CLUTTER_MOTION:
+      if (!tool->pressed_buttons)
+        repick_for_event (tool, event);
+      break;
+    case CLUTTER_PROXIMITY_IN:
+      tool->current_tablet =
+        meta_wayland_tablet_seat_lookup_tablet (tool->seat,
+                                                clutter_event_get_source_device (event));
+      break;
+    default:
+      break;
+    }
 }
 
 gboolean
 meta_wayland_tablet_tool_handle_event (MetaWaylandTabletTool *tool,
                                        const ClutterEvent    *event)
 {
+  switch (event->type)
+    {
+    case CLUTTER_PROXIMITY_IN:
+      /* We don't have much info here to make anything useful out of it,
+       * wait until the first motion event so we have both coordinates
+       * and tool.
+       */
+      break;
+    case CLUTTER_PROXIMITY_OUT:
+      meta_wayland_tablet_tool_set_focus (tool, NULL);
+      break;
+    default:
+      return CLUTTER_EVENT_PROPAGATE;
+    }
+
   return CLUTTER_EVENT_STOP;
 }
