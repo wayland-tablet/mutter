@@ -114,6 +114,7 @@ static MetaWaylandTabletManager *
 meta_wayland_tablet_manager_new (MetaWaylandCompositor *compositor)
 {
   MetaWaylandTabletManager *tablet_manager;
+  MetaWaylandTabletSeat *tablet_seat;
 
   tablet_manager = g_slice_new0 (MetaWaylandTabletManager);
   tablet_manager->compositor = compositor;
@@ -125,6 +126,10 @@ meta_wayland_tablet_manager_new (MetaWaylandCompositor *compositor)
   wl_global_create (tablet_manager->wl_display,
                     &wl_tablet_manager_interface, 1,
                     compositor, bind_tablet_manager);
+
+  /* Ensure the tablet_seat for seat0 is initialized */
+  tablet_seat = meta_wayland_tablet_seat_new (tablet_manager);
+  g_hash_table_insert (tablet_manager->seats, compositor->seat, tablet_seat);
 
   return tablet_manager;
 }
