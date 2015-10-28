@@ -117,6 +117,25 @@ meta_wayland_tablet_tool_set_cursor_surface (MetaWaylandTabletTool *tool,
 }
 
 static void
+meta_wayland_tablet_tool_ensure_resource (MetaWaylandTabletTool *tool,
+                                          struct wl_client      *client)
+{
+  struct wl_resource *seat_resource;
+
+  seat_resource = meta_wayland_tablet_seat_lookup_resource (tool->seat, client);
+
+  if (seat_resource &&
+      !meta_wayland_tablet_tool_lookup_resource (tool, client))
+    {
+      meta_wayland_tablet_tool_create_new_resource (tool, client,
+                                                    seat_resource,
+                                                    0);
+
+      meta_wayland_tablet_seat_notify_tool (tool->seat, tool, client);
+    }
+}
+
+static void
 meta_wayland_tablet_tool_set_focus (MetaWaylandTabletTool *tool,
                                     MetaWaylandSurface    *surface)
 {
@@ -147,7 +166,7 @@ meta_wayland_tablet_tool_set_focus (MetaWaylandTabletTool *tool,
       tool->focus_surface = NULL;
     }
 
-  if (surface != NULL)
+  if (surface != NULL && tool->current_tablet)
     {
       struct wl_resource *resource, *tablet_resource;
       struct wl_client *client;
@@ -160,6 +179,8 @@ meta_wayland_tablet_tool_set_focus (MetaWaylandTabletTool *tool,
 
       move_resources_for_client (&tool->focus_resource_list,
                                  &tool->resource_list, client);
+
+      meta_wayland_tablet_tool_ensure_resource (tool, client);
 
       tablet_resource = meta_wayland_tablet_lookup_resource (tool->current_tablet,
                                                              client);
