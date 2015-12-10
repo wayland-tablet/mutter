@@ -1265,6 +1265,8 @@ root_cursor_prepare_at (MetaCursorSprite *cursor_sprite,
   const MetaMonitorInfo *monitor;
 
   monitor = meta_screen_get_monitor_for_point (screen, x, y);
+  if (monitor == NULL)
+    return;
 
   /* Reload the cursor texture if the scale has changed. */
   meta_cursor_sprite_set_theme_scale (cursor_sprite, monitor->scale);
