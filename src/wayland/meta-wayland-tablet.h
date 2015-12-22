@@ -53,5 +53,8 @@ struct wl_resource *
              meta_wayland_tablet_lookup_resource     (MetaWaylandTablet  *tablet,
                                                       struct wl_client   *client);
 
+void
+             meta_wayland_tablet_notify_device_details (MetaWaylandTablet  *tablet,
+                                                        struct wl_resource *resource);
 
 #endif /* META_WAYLAND_TABLET_H */

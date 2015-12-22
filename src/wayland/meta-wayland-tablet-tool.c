@@ -184,6 +184,7 @@ meta_wayland_tablet_tool_notify_details (MetaWaylandTabletTool *tool,
 {
   guint64 serial;
 
+meta_warning("Beginning to blast tool events...\n");
   zwp_tablet_tool_v1_send_type (resource,
                               input_device_tool_get_type (tool->device_tool));
 
@@ -197,6 +198,7 @@ meta_wayland_tablet_tool_notify_details (MetaWaylandTabletTool *tool,
   /* FIXME: zwp_tablet_tool_v1.hardware_id missing */
 
   zwp_tablet_tool_v1_send_done (resource);
+meta_warning("Beginning to blast tool events... DONE\n");
 }
 
 static void
@@ -205,6 +207,7 @@ meta_wayland_tablet_tool_ensure_resource (MetaWaylandTabletTool *tool,
 {
   struct wl_resource *seat_resource, *tool_resource;
 
+meta_warning("Ensuring tool resources are present...\n");
   seat_resource = meta_wayland_tablet_seat_lookup_resource (tool->seat, client);
 
   if (seat_resource &&
@@ -214,9 +217,12 @@ meta_wayland_tablet_tool_ensure_resource (MetaWaylandTabletTool *tool,
                                                                     seat_resource,
                                                                     0);
 
+      meta_warning("NOTIFYING OF NEW TOOL...\n");
       meta_wayland_tablet_seat_notify_tool (tool->seat, tool, client);
+      meta_warning("NOTIFYING OF NEW TOOL... DONE\n");
       meta_wayland_tablet_tool_notify_details (tool, tool_resource);
     }
+meta_warning("Ensuring tool resources are present... DONE\n");
 }
 
 static void
