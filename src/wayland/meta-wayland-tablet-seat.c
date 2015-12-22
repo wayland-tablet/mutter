@@ -82,12 +82,8 @@ notify_tablet_added (MetaWaylandTabletSeat *tablet_seat,
   if (!resource)
     return;
 
-<<<<<<< HEAD
   zwp_tablet_seat_v1_send_tablet_added (client_resource, resource);
-=======
-  zwp_tablet_seat1_send_tablet_added (client_resource, resource);
   meta_wayland_tablet_notify_device_details (tablet, resource);
->>>>>>> e22140d... HACK: Change ordering of protocol events so clients see tablet burst
 }
 
 static void
