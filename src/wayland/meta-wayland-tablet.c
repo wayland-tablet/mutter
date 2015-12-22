@@ -80,12 +80,14 @@ static const struct zwp_tablet_v1_interface tablet_interface = {
   tablet_destroy
 };
 
-static void
+void
 meta_wayland_tablet_notify_device_details (MetaWaylandTablet  *tablet,
                                            struct wl_resource *resource)
 {
   ClutterInputDevice *device = tablet->device;
   guint vid, pid;
+
+  meta_warning("Beginning to blast tablet events...\n");
 
   zwp_tablet_v1_send_name (resource, clutter_input_device_get_device_name (device));
 
@@ -96,6 +98,7 @@ meta_wayland_tablet_notify_device_details (MetaWaylandTablet  *tablet,
   /* FIXME: zwp_tablet_v1.type, zwp_tablet_v1.path missing */
 
   zwp_tablet_v1_send_done (resource);
+  meta_warning("Beginning to blast tablet events... DONE\n");
 }
 
 struct wl_resource *
@@ -106,6 +109,8 @@ meta_wayland_tablet_create_new_resource (MetaWaylandTablet  *tablet,
 {
   struct wl_resource *resource;
 
+  meta_warning("Creating new wayland tablet resource...\n");
+
   resource = wl_resource_create (client, &zwp_tablet_v1_interface,
                                  wl_resource_get_version (seat_resource), id);
   wl_resource_set_implementation (resource, &tablet_interface,
@@ -113,8 +118,8 @@ meta_wayland_tablet_create_new_resource (MetaWaylandTablet  *tablet,
   wl_resource_set_user_data (resource, tablet);
   wl_list_insert (&tablet->resource_list, wl_resource_get_link (resource));
 
-  meta_wayland_tablet_notify_device_details (tablet, resource);
-
+  //meta_wayland_tablet_notify_device_details (tablet, resource);
+  meta_warning("Creating new wayland tablet resource... DONE\n");
   return resource;
 }
 
