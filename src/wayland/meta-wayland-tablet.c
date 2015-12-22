@@ -63,7 +63,7 @@ meta_wayland_tablet_free (MetaWaylandTablet *tablet)
   wl_resource_for_each_safe (resource, next, &tablet->resource_list)
     {
       zwp_tablet_v1_send_removed (resource);
-      wl_resource_destroy (resource);
+      //wl_resource_destroy (resource);
     }
 
   g_slice_free (MetaWaylandTablet, tablet);
