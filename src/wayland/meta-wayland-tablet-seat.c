@@ -83,6 +83,7 @@ notify_tablet_added (MetaWaylandTabletSeat *tablet_seat,
     return;
 
   zwp_tablet_seat_v1_send_tablet_added (client_resource, resource);
+  meta_wayland_tablet_notify_device_details (tablet, resource);
 }
 
 static void
