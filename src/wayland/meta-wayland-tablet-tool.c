@@ -36,6 +36,7 @@
 #include "meta-wayland-tablet-tool.h"
 
 #define TABLET_AXIS_MAX 65535
+#define TABLET_ANGLE_SCALE 100
 
 static void
 unbind_resource (struct wl_resource *resource)
@@ -470,8 +471,8 @@ notify_tilt (MetaWaylandTabletTool *tool,
   wl_resource_for_each(resource, &tool->focus_resource_list)
     {
       zwp_tablet_tool_v1_send_tilt (resource,
-                                  (int32_t) (xtilt * TABLET_AXIS_MAX),
-                                  (int32_t) (ytilt * TABLET_AXIS_MAX));
+                                  (int32_t) (xtilt * TABLET_ANGLE_SCALE),
+                                  (int32_t) (ytilt * TABLET_ANGLE_SCALE));
     }
 }
 
