@@ -27,6 +27,8 @@
 #include "meta-wayland-buffer.h"
 #include "meta-xwayland.h"
 #include "screen-private.h"
+#include "backends/meta-backend-private.h"
+#include "backends/meta-cursor-tracker-private.h"
 
 struct _MetaWaylandSurfaceRoleCursor
 {
