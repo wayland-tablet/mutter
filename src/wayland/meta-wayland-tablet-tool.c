@@ -204,8 +204,8 @@ meta_wayland_tablet_tool_notify_details (MetaWaylandTabletTool *tool,
                               input_device_tool_get_type (tool->device_tool));
 
   serial = (guint64) clutter_input_device_tool_get_serial (tool->device_tool);
-  zwp_tablet_tool_v1_send_hwserial (resource, (uint32_t) (serial >> 32),
-                                   (uint32_t) (serial & G_MAXUINT32));
+  zwp_tablet_tool_v1_send_hardware_serial (resource, (uint32_t) (serial >> 32),
+                                           (uint32_t) (serial & G_MAXUINT32));
 
   zwp_tablet_tool_v1_send_capability (resource,
                                     input_device_get_capabilities (tool->device));
