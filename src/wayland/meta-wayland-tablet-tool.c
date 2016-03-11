@@ -91,6 +91,12 @@ input_device_get_capabilities (ClutterInputDevice *device)
         case CLUTTER_INPUT_AXIS_YTILT:
           capabilities |= ZWP_TABLET_TOOL_V1_CAPABILITY_TILT;
           break;
+        case CLUTTER_INPUT_AXIS_ROTATION:
+          capabilities |= ZWP_TABLET_TOOL_V1_CAPABILITY_ROTATION;
+          break;
+        case CLUTTER_INPUT_AXIS_SLIDER:
+          capabilities |= ZWP_TABLET_TOOL_V1_CAPABILITY_SLIDER;
+          break;
         default:
           break;
         }
@@ -446,6 +452,13 @@ notify_axis (MetaWaylandTabletTool *tool,
         case CLUTTER_INPUT_AXIS_DISTANCE:
           zwp_tablet_tool_v1_send_distance (resource, value);
           break;
+        case CLUTTER_INPUT_AXIS_ROTATION:
+          value = val * TABLET_ANGLE_SCALE;
+          zwp_tablet_tool_v1_send_rotation (resource, value);
+          break;
+        case CLUTTER_INPUT_AXIS_SLIDER:
+          zwp_tablet_tool_v1_send_slider (resource, value);
+          break;
         default:
           break;
         }
@@ -508,6 +521,10 @@ notify_axes (MetaWaylandTabletTool *tool,
     notify_axis (tool, event, CLUTTER_INPUT_AXIS_DISTANCE);
   if (capabilities & ZWP_TABLET_TOOL_V1_CAPABILITY_TILT)
     notify_tilt (tool, event);
+  if (capabilities & ZWP_TABLET_TOOL_V1_CAPABILITY_ROTATION)
+    notify_axis (tool, event, CLUTTER_INPUT_AXIS_ROTATION);
+  if (capabilities & ZWP_TABLET_TOOL_V1_CAPABILITY_SLIDER)
+    notify_axis (tool, event, CLUTTER_INPUT_AXIS_SLIDER);
 
   notify_frame (tool, event);
 }
